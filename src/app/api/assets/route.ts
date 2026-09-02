@@ -45,10 +45,14 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ assets });
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET /api/assets error:", error);
+    const isPlaceholder = process.env.DATABASE_URL?.includes("[YOUR-PROJECT-REF]");
+    const errorMsg = isPlaceholder
+      ? "Supabase database setup pending. Please update your DATABASE_URL in .env and execute 'bun run db:push'."
+      : "Failed to load assets from database.";
     return NextResponse.json(
-      { error: "Failed to load assets" },
+      { error: errorMsg, assets: [] },
       { status: 500 },
     );
   }

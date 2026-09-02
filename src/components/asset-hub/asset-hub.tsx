@@ -67,13 +67,65 @@ function ErrorState({
   message: string;
   onRetry: () => void;
 }) {
+  const isSupabasePending = message.toLowerCase().includes("supabase");
+
+  if (isSupabasePending) {
+    return (
+      <div className="mx-auto my-12 max-w-2xl rounded-2xl border border-primary/30 bg-card/80 p-8 shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-4 border-b border-border/60 pb-5">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
+            <Boxes className="size-6 text-emerald-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Supabase PostgreSQL Connection Pending</h3>
+            <p className="text-xs text-muted-foreground">Ready for real-time asset management</p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4 text-sm">
+          <p className="text-muted-foreground">
+            The project has been configured for **Supabase PostgreSQL**. To complete setup:
+          </p>
+
+          <div className="space-y-3 rounded-xl bg-muted/40 p-4 font-mono text-xs border border-border/50">
+            <div className="flex flex-col gap-1">
+              <span className="text-muted-foreground text-[11px] font-sans font-medium">1. Set connection string in <code className="text-primary">.env</code>:</span>
+              <code className="text-emerald-400 break-all bg-background/80 p-2 rounded border border-border/40">
+                DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+              </code>
+            </div>
+            <div className="flex flex-col gap-1 pt-2">
+              <span className="text-muted-foreground text-[11px] font-sans font-medium">2. Push schema to Supabase:</span>
+              <code className="text-primary bg-background/80 p-2 rounded border border-border/40">
+                bun run db:push
+              </code>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Once configured, click <strong>Test Connection</strong> below to load your real-time asset dashboard.
+          </p>
+        </div>
+
+        <div className="mt-8 flex items-center justify-end gap-3">
+          <button
+            onClick={onRetry}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-emerald-500"
+          >
+            Test Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
       <div className="flex size-14 items-center justify-center rounded-full bg-destructive/15 text-destructive">
         <SearchX className="size-7" />
       </div>
       <div>
-        <p className="font-medium">Something went wrong</p>
+        <p className="font-medium">Connection Error</p>
         <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       </div>
       <button
@@ -85,6 +137,7 @@ function ErrorState({
     </div>
   );
 }
+
 
 function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
