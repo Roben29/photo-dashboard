@@ -89,9 +89,9 @@ function ErrorState({
 
           <div className="space-y-3 rounded-xl bg-muted/40 p-4 font-mono text-xs border border-border/50">
             <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-[11px] font-sans font-medium">1. Set connection string in <code className="text-primary">.env</code>:</span>
+              <span className="text-muted-foreground text-[11px] font-sans font-medium">1. Replace <code className="text-amber-400">[YOUR-PASSWORD]</code> in <code className="text-primary">.env</code> with your Supabase DB password:</span>
               <code className="text-emerald-400 break-all bg-background/80 p-2 rounded border border-border/40">
-                DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+                DATABASE_URL="postgresql://postgres.iwqkhrvioelknvoxwglf:[YOUR-PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
               </code>
             </div>
             <div className="flex flex-col gap-1 pt-2">
@@ -101,6 +101,7 @@ function ErrorState({
               </code>
             </div>
           </div>
+
 
           <p className="text-xs text-muted-foreground">
             Once configured, click <strong>Test Connection</strong> below to load your real-time asset dashboard.
