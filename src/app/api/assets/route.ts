@@ -85,10 +85,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save file to public/uploads with a hashed unique name
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Save file to uploads directory with serverless fallback
+    let uploadsDir = path.join(process.cwd(), "public", "uploads");
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+    } catch {
+      uploadsDir = path.join("/tmp", "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -98,8 +105,13 @@ export async function POST(request: NextRequest) {
       .replace(/_+/g, "_");
     const storedName = `${hash}_${safeName}`;
     const fullPath = path.join(uploadsDir, storedName);
-    fs.writeFileSync(fullPath, buffer);
+    try {
+      fs.writeFileSync(fullPath, buffer);
+    } catch (e) {
+      console.warn("Could not write file to disk on serverless platform:", e);
+    }
     const storageUrl = `/uploads/${storedName}`;
+
 
     // Generate a thumbnail for image formats by reusing the stored file
     const imageExts = ["png", "jpg", "jpeg", "webp", "svg", "gif"];
