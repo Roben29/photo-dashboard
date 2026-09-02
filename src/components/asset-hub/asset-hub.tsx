@@ -144,10 +144,9 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-20 text-center">
       <div className="relative">
-        <div className="flex size-20 items-center justify-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/30">
-          <FolderOpen className="size-10" />
+        <div className="flex size-24 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/15 to-purple-900/10 p-3 ring-1 ring-purple-500/30 shadow-lg shadow-purple-500/10">
+          <img src="/logo.png" alt="Photo Dashboard Logo" className="size-full object-contain drop-shadow-md" />
         </div>
-        <Boxes className="absolute -right-2 -top-2 size-7 text-primary/60" />
       </div>
       <div className="max-w-md">
         <h3 className="text-lg font-semibold">Your library is empty</h3>
@@ -172,8 +171,8 @@ function Footer() {
     <footer className="mt-auto border-t border-border/60 bg-background/60">
       <div className="mx-auto flex max-w-[1600px] flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row md:px-6">
         <div className="flex items-center gap-2">
-          <Boxes className="size-4 text-primary" />
-          <span className="font-medium">Asset Forge</span>
+          <img src="/logo.png" alt="Logo" className="size-4 object-contain" />
+          <span className="font-medium text-foreground">Asset Forge</span>
           <span className="text-muted-foreground/50">·</span>
           <span>Browser-based creative asset hub</span>
         </div>
@@ -186,3 +185,4 @@ function Footer() {
     </footer>
   );
 }
+

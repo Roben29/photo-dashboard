@@ -27,8 +27,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Asset Forge" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
+
 };
 
 export default function RootLayout({

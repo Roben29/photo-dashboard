@@ -45,8 +45,8 @@ export function Header() {
         {/* Top row: brand + search + upload */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/30">
-              <Boxes className="size-5" />
+            <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 p-1 ring-1 ring-purple-500/40 shadow-sm shadow-purple-500/20">
+              <img src="/logo.png" alt="Photo Dashboard Logo" className="size-full object-contain" />
             </div>
             <div className="leading-tight">
               <h1 className="text-base font-semibold tracking-tight">
@@ -57,6 +57,7 @@ export function Header() {
               </p>
             </div>
           </div>
+
 
           <div className="relative order-3 w-full min-w-0 flex-1 sm:order-none">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
