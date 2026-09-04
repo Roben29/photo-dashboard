@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { serializeAsset } from "@/lib/serialize";
 import { getExtension } from "@/lib/types";
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export const dynamic = "force-dynamic";
 
@@ -85,37 +88,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save file to uploads directory with serverless fallback
-    let uploadsDir = path.join(process.cwd(), "public", "uploads");
-    try {
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-    } catch {
-      uploadsDir = path.join("/tmp", "uploads");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-    }
+    const arrayBuffer = await file.arrayBuffer();
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const hash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
-    const safeName = file.name
-      .replace(/[^a-zA-Z0-9.\-_]/g, "_")
-      .replace(/_+/g, "_");
-    const storedName = `${hash}_${safeName}`;
-    const fullPath = path.join(uploadsDir, storedName);
-    try {
-      fs.writeFileSync(fullPath, buffer);
-    } catch (e) {
-      console.warn("Could not write file to disk on serverless platform:", e);
-    }
-    const storageUrl = `/uploads/${storedName}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("assets")
+      .upload(fileName, arrayBuffer, {
+        contentType: file.type,
+      });
 
+    if (uploadError) throw uploadError;
 
-    // Generate a thumbnail for image formats by reusing the stored file
+    const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(fileName);
+
     const imageExts = ["png", "jpg", "jpeg", "webp", "svg", "gif"];
-    const thumbnailUrl = imageExts.includes(ext) ? storageUrl : null;
+    const thumbnailUrl = imageExts.includes(ext) ? publicUrl : null;
 
     let references: string[] = [];
     try {
@@ -130,9 +117,9 @@ export async function POST(request: NextRequest) {
     const row = await db.asset.create({
       data: {
         fileName: file.name,
-        fileSizeBytes: buffer.length,
+        fileSizeBytes: arrayBuffer.byteLength,
         fileExtension: ext,
-        storageUrl,
+        storageUrl: publicUrl,
         thumbnailUrl,
         title: title.trim(),
         category,
