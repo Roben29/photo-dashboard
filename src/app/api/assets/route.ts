@@ -4,11 +4,6 @@ import { serializeAsset } from "@/lib/serialize";
 import { getExtension } from "@/lib/types";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -90,6 +85,12 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+
+    // Create Supabase client at request time (not build time) so env vars are available
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("assets")
