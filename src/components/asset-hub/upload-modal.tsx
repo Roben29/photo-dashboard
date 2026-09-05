@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAssetStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
 import {
   ACCEPTED_EXTENSIONS,
   formatFileSize,
@@ -156,17 +157,68 @@ export function UploadModal() {
     }
     setSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("title", title);
-      fd.append("category", category);
-      fd.append("description", description);
-      fd.append("promptUsed", promptUsed);
-      fd.append("workflowNotes", workflowNotes);
-      fd.append("authorName", authorName || "Anonymous");
-      fd.append("referenceWebsites", JSON.stringify(references));
+      const ext = getExtension(file.name);
+      let storageUrl = "";
+      let thumbnailUrl: string | null = null;
+      let usedDirectUpload = false;
 
-      const res = await fetch("/api/assets", { method: "POST", body: fd });
+      // Try direct upload to Supabase Storage first (supports heavy 3D / high-res files bypassing Vercel 4.5MB limit)
+      try {
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+        const { error: uploadError } = await supabase.storage
+          .from("assets")
+          .upload(fileName, file, {
+            contentType: file.type || "application/octet-stream",
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("assets").getPublicUrl(fileName);
+          storageUrl = publicUrl;
+          const imageExts = ["png", "jpg", "jpeg", "webp", "svg", "gif"];
+          thumbnailUrl = imageExts.includes(ext) ? publicUrl : null;
+          usedDirectUpload = true;
+        }
+      } catch (directErr) {
+        console.warn("Direct upload error, falling back to server upload:", directErr);
+      }
+
+      let res: Response;
+      if (usedDirectUpload && storageUrl) {
+        res = await fetch("/api/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileSizeBytes: file.size,
+            fileExtension: ext,
+            storageUrl,
+            thumbnailUrl,
+            title: title.trim(),
+            category,
+            description,
+            promptUsed,
+            workflowNotes,
+            authorName: authorName || "Anonymous",
+            referenceWebsites: references,
+          }),
+        });
+      } else {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("title", title);
+        fd.append("category", category);
+        fd.append("description", description);
+        fd.append("promptUsed", promptUsed);
+        fd.append("workflowNotes", workflowNotes);
+        fd.append("authorName", authorName || "Anonymous");
+        fd.append("referenceWebsites", JSON.stringify(references));
+
+        res = await fetch("/api/assets", { method: "POST", body: fd });
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Upload failed");

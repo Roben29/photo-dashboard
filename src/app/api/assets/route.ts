@@ -58,6 +58,55 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const contentType = request.headers.get("content-type") || "";
+
+    // Handle direct client uploads where file is already in Supabase Storage
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      const {
+        fileName,
+        fileSizeBytes,
+        fileExtension,
+        storageUrl,
+        thumbnailUrl,
+        title,
+        category = "Uncategorized",
+        description,
+        promptUsed,
+        workflowNotes,
+        authorName = "Anonymous",
+        referenceWebsites = [],
+      } = body;
+
+      if (!storageUrl || !fileName || !title?.trim()) {
+        return NextResponse.json(
+          { error: "Missing required fields: storageUrl, fileName, or title" },
+          { status: 400 },
+        );
+      }
+
+      const row = await db.asset.create({
+        data: {
+          fileName,
+          fileSizeBytes: Number(fileSizeBytes) || 0,
+          fileExtension: fileExtension || getExtension(fileName) || "bin",
+          storageUrl,
+          thumbnailUrl: thumbnailUrl || null,
+          title: title.trim(),
+          category,
+          description: description?.trim() || null,
+          promptUsed: promptUsed?.trim() || null,
+          referenceWebsites: JSON.stringify(
+            Array.isArray(referenceWebsites) ? referenceWebsites : [],
+          ),
+          workflowNotes: workflowNotes?.trim() || null,
+          authorName: authorName?.trim() || "Anonymous",
+        },
+      });
+
+      return NextResponse.json({ asset: serializeAsset(row) });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const title = (formData.get("title") as string | null) || "";
@@ -86,19 +135,40 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
 
-    // Create Supabase client at request time (not build time) so env vars are available
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    // Select valid Supabase key (prefer service role key if provided, else use anon/publishable key)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const isValidServiceKey =
+      serviceKey &&
+      serviceKey !== "your-service-role-key-here" &&
+      !serviceKey.includes("service-role-key");
+    const supabaseKey = isValidServiceKey
+      ? serviceKey
+      : (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { error: "Supabase configuration is missing (URL or API key)." },
+        { status: 500 },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { error: uploadError } = await supabase.storage
       .from("assets")
       .upload(fileName, arrayBuffer, {
-        contentType: file.type,
+        contentType: file.type || "application/octet-stream",
+        upsert: true,
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error("Supabase storage upload error:", uploadError);
+      return NextResponse.json(
+        { error: `Storage error: ${uploadError.message}` },
+        { status: 500 },
+      );
+    }
 
     const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(fileName);
 
@@ -133,11 +203,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ asset: serializeAsset(row) });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/assets error:", error);
     return NextResponse.json(
-      { error: "Failed to create asset" },
+      { error: error?.message || "Failed to create asset" },
       { status: 500 },
     );
   }
 }
+
